@@ -2,4 +2,264 @@
 @tailwind components;
 @tailwind utilities;
 
-body { @apply bg-gray-50 text-gray-800 }
+/* Theme variables for light/dark - futuristic palette */
+:root{
+  --bg-1: #0f172a; /* fallback for gradient stops when not in light */
+  --bg-2: #071032;
+  --card-bg: rgba(255,255,255,0.85);
+  --muted: #6b7280;
+  --accent-1: #06b6d4;
+  --accent-2: #f97316;
+  --glass: rgba(255,255,255,0.06);
+  --text: #0f172a;
+  --logo-glow: rgba(6,182,212,0.18);
+}
+
+/* Light theme overrides */
+:root.light {
+  --bg-1: #fbfbff;
+  --bg-2: #f6f7ff;
+  --card-bg: rgba(255,255,255,0.9);
+  --muted: #6b7280;
+  --text: #0f172a;
+  --glass: rgba(255,255,255,0.6);
+  --logo-glow: rgba(250,204,21,0.12);
+}
+
+/* Dark theme */
+.dark {
+  --bg-1: #041025;
+  --bg-2: #00121a;
+  --card-bg: rgba(8,10,13,0.55);
+  --muted: #9ca3af;
+  --text: #e6eef8;
+  --glass: rgba(255,255,255,0.03);
+  --logo-glow: rgba(124,58,237,0.12);
+}
+
+html, body, #root { height: 100%; min-height: 100%; }
+body { min-height: 100vh; display: block; }
+
+body {
+  background-image: radial-gradient( circle at 10% 10%, rgba(6,182,212,0.06), transparent 10% ),
+                    radial-gradient( circle at 90% 90%, rgba(249,115,22,0.03), transparent 10% ),
+                    linear-gradient(120deg, var(--bg-1), var(--bg-2));
+  color: var(--text);
+  transition: background-color .35s ease, color .25s ease;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  min-height: 100vh;
+}
+
+/* container padding tweaks so on small screens content uses full width */
+@media (max-width: 640px) {
+  .logo-badge { padding-left: 0.5rem; padding-right: 0.5rem; }
+  .app-header > .w-full { padding-left: 0.5rem; padding-right: 0.5rem; }
+  .card, .dashboard-panel, .top3-tile { padding-left: 0.9rem; padding-right: 0.9rem; }
+  main .max-w-6xl { padding-left: 0.5rem; padding-right: 0.5rem; }
+}
+
+/* Futuristic card */
+.dashboard-panel, .card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  background-color: var(--card-bg);
+  border-radius: 1rem;
+  box-shadow: 0 6px 24px rgba(2,6,23,0.35), var(--logo-glow);
+  backdrop-filter: blur(8px) saturate(1.1);
+  padding: 1rem;
+  transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+
+/* Neon text effect for headings */
+.neon-title {
+  color: var(--text);
+  text-shadow: 0 6px 18px rgba(124,58,237,0.06), 0 1px 0 rgba(255,255,255,0.02);
+  letter-spacing: 0.2px;
+  font-weight: 700;
+}
+
+/* small utilities */
+.logo-badge {
+  display:inline-flex;
+  align-items:center;
+  gap:.5rem;
+  padding:.35rem .6rem;
+  border-radius:999px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+  box-shadow: 0 4px 18px rgba(6,182,212,0.06);
+}
+
+/* Theme toggle button */
+.theme-toggle {
+  display:inline-flex;
+  align-items:center;
+  gap:.5rem;
+  padding:.4rem;
+  border-radius:999px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.015));
+  border: 1px solid rgba(255,255,255,0.04);
+}
+
+.dark .theme-toggle {
+  background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+}
+
+/* make header stand out */
+.app-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:1rem;
+  padding:1rem;
+  margin-bottom:1rem;
+}
+
+/* Neon pulse animation for top-3 tiles */
+@keyframes neonPulse {
+  0% { box-shadow: 0 6px 24px rgba(124,58,237,0.08), 0 0 0 0 rgba(124,58,237,0.00); transform: translateY(0); }
+  50% { box-shadow: 0 18px 48px rgba(124,58,237,0.12), 0 0 40px 6px rgba(124,58,237,0.04); transform: translateY(-3px); }
+  100% { box-shadow: 0 6px 24px rgba(124,58,237,0.08), 0 0 0 0 rgba(124,58,237,0.00); transform: translateY(0); }
+}
+
+.top3-tile {
+  border-radius: 0.9rem;
+  padding: 1rem;
+  transition: transform .18s ease, box-shadow .18s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* subtle glowing border */
+.top3-tile::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Gold, Silver, Bronze palettes (dark/light aware) */
+.top3-gold {
+  background: linear-gradient(135deg, #ffd466, #ff9c3b);
+  color: #111827;
+  box-shadow: 0 10px 30px rgba(250, 204, 21, 0.18);
+  z-index: 1;
+}
+.top3-silver {
+  background: linear-gradient(135deg, #e6e9ef, #c9cdd6);
+  color: #0f172a;
+  box-shadow: 0 10px 30px rgba(148,163,184,0.16), inset 0 1px 0 rgba(255,255,255,0.5);
+  z-index: 1;
+}
+.top3-bronze {
+  background: linear-gradient(135deg, #b87333, #cd7f32);
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(184,115,51,0.18);
+  z-index: 1;
+}
+
+/* Neon pulse only on the top-1 tile, mild on others */
+.top3-gold.neon-pulse { animation: neonPulse 3.2s infinite ease-in-out; }
+.top3-silver.neon-pulse { animation: neonPulse 4.2s infinite ease-in-out; }
+.top3-bronze.neon-pulse { animation: neonPulse 4.8s infinite ease-in-out; }
+
+/* ensure contents above pseudo-overlay */
+.top3-tile > * { position: relative; z-index: 2; }
+
+/* Use unified .card class more visually */
+.card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  background-color: var(--card-bg);
+  border-radius: 1rem;
+  box-shadow: 0 8px 36px rgba(2,6,23,0.25), var(--logo-glow);
+  backdrop-filter: blur(8px) saturate(1.05);
+  padding: 1rem;
+  transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+.card:hover { transform: translateY(-6px); box-shadow: 0 30px 80px rgba(2,6,23,0.45), var(--logo-glow); }
+
+/* Ensure native selects and options are legible in both light & dark themes */
+select {
+  color: var(--text);
+  background: transparent;
+  -webkit-text-fill-color: var(--text); /* for some WebKit browsers */
+}
+
+/* Force option text color and provide a readable background in dropdowns where supported.
+   Note: some browsers ignore styling for <option>, but this helps where possible. */
+select option {
+  color: var(--text);
+  background: var(--card-bg);
+}
+
+/* keep inline SVG/icon color consistent with text in selects */
+select, select * { color: var(--text) !important; }
+
+/* Small visual tweak: ensure select inside the pill control shows pointer cursor */
+.inline-flex select { cursor: pointer; }
+
+/* Better cross-browser select styling for Chrome (dark mode aware) */
+.custom-select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+
+  /* Ensure displayed value is high-contrast and bold */
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important; /* WebKit forced-dark fix */
+  text-shadow: none !important;
+  opacity: 1 !important;
+  font-weight: 600;
+  font-size: 0.95rem;
+
+  /* clearer pill background and subtle border for contrast in dark mode */
+  background-color: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 999px;
+  padding-left: 0.75rem;
+  padding-right: 2.2rem;
+  outline: none;
+}
+
+/* Slightly stronger background in dark theme */
+.dark .custom-select {
+  background-color: rgba(255,255,255,0.03);
+  border-color: rgba(255,255,255,0.06);
+}
+
+/* Focus state for keyboard accessibility */
+.custom-select:focus {
+  box-shadow: 0 8px 24px rgba(124,58,237,0.12);
+  border-color: rgba(124,58,237,0.24);
+}
+
+/* Try to style selected option where browsers allow it */
+.custom-select option,
+.custom-select option:checked {
+  color: var(--text) !important;
+  background: var(--card-bg);
+}
+
+/* WebKit-specific enforcement when OS forces dark mode */
+@supports (-webkit-text-fill-color: transparent) {
+  .custom-select { -webkit-text-fill-color: var(--text) !important; }
+}
+
+/* keep inline arrow visible and non-overlapping */
+.inline-flex::after {
+  right: 0.9rem;
+  opacity: 0.95;
+  filter: none;
+}
+
+/* small-screen tweak */
+@media (max-width:640px){
+  .custom-select { padding-right: 1.9rem; padding-left: 0.6rem; }
+  .inline-flex::after { right: 0.6rem; }
+}
+
+/* small responsive tweak */
+@media (max-width: 640px){
+  .app-header { flex-direction:column; align-items:flex-start; gap:.5rem }
+}
