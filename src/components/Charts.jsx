@@ -70,53 +70,49 @@ export default function Charts({ rows = [], allRows = [] }) {
     return { byDistance: chartData, athletes: athletesArr, rankMap: rankMapLocal }
   }, [rows])
 
-  // --- time series per athlete (best per date) ---
-  const timeSeries = useMemo(() => {
-    const dateSet = new Set()
+  // --- distance progression per athlete (time vs distance) ---
+  const distanceProgression = useMemo(() => {
+    const distanceSet = new Set()
     const athletesSet = new Set()
+    const map = {} // map[athlete][distanceKm]=bestTimeSeconds
 
-    const parsed = rows.map((r, idx) => {
+    allRows.forEach((r) => {
+      const rawDist = r.Distance || (r.DistanceKm ? `${r.DistanceKm}km` : '')
+      let distKm = 0
+      if (rawDist.includes('km')) {
+        distKm = parseFloat(rawDist.replace('km', ''))
+      } else if (rawDist.includes('m')) {
+        distKm = parseFloat(rawDist.replace('m', '')) / 1000
+      } else {
+        distKm = parseFloat(rawDist) || 0
+      }
+      if (distKm > 0 && distKm <= 5) distanceSet.add(distKm)
+
       const name = (r.Name || r.Runner || r.Athlete || 'Unknown').toString().trim()
       athletesSet.add(name)
 
-      const rawDate = r.date ?? r.Date ?? r.DateString ?? (r.raw && (r.raw.date || r.raw.Date)) ?? ''
-      let label = ''
-      if (rawDate) {
-        const d = new Date(rawDate)
-        if (!isNaN(d)) label = d.toISOString().slice(0, 10)
-        else label = String(rawDate).trim()
-      } else {
-        label = `run-${idx + 1}`
-      }
-      dateSet.add(label)
-
       const tRaw = Number(r.timeSeconds ?? r.TimeSeconds ?? r.Time ?? NaN)
       const t = isFinite(tRaw) ? tRaw : null
-
-      return { name, label, t }
+      if (!map[name]) map[name] = {}
+      if (t == null) return
+      const cur = map[name][distKm]
+      if (cur == null || t < cur) map[name][distKm] = t
     })
 
-    const dates = Array.from(dateSet).sort()
+    const distances = Array.from(distanceSet).sort((a,b) => a - b)
     const athletesArr = Array.from(athletesSet)
 
-    const map = {}
-    parsed.forEach(p => {
-      if (!map[p.label]) map[p.label] = {}
-      if (p.t == null) return
-      const cur = map[p.label][p.name]
-      if (cur == null || p.t < cur) map[p.label][p.name] = p.t
-    })
-
-    const data = dates.map(date => {
-      const point = { date }
-      athletesArr.forEach(a => {
-        point[a] = map[date] && map[date][a] != null ? map[date][a] : null
+    const data = distances.map(dist => {
+      const point = { distance: dist }
+      athletesArr.forEach(ath => {
+        const timeSec = map[ath][dist]
+        point[ath] = timeSec ? timeSec / 60 : null  // convert to minutes
       })
       return point
     })
 
-    return { data, athletes: athletesArr }
-  }, [rows])
+    return { data, athletes: athletesArr, distances }
+  }, [allRows])
 
   // --- golds across allRows (unchanged) ---
   const goldData = useMemo(() => {
@@ -161,15 +157,19 @@ export default function Charts({ rows = [], allRows = [] }) {
         background: 'var(--card-bg)', padding: 12, borderRadius: 10,
         boxShadow: '0 10px 30px rgba(2,6,23,0.35)', color: 'var(--text)', fontSize: 13
       }}>
-        <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 6 }}>{label}</div>
+        <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 6 }}>{`Distance: ${label} km`}</div>
         {payload.map((p, i) => {
           if (p.value == null) return null
           const color = p.color || COLORS[i % COLORS.length]
+          const minutes = p.value
+          const mm = Math.floor(minutes)
+          const ss = Math.round((minutes - mm) * 60)
+          const timeStr = `${mm}:${String(ss).padStart(2, '0')}`
           return (
             <div key={p.dataKey} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
               <div style={{ width: 10, height: 10, borderRadius: 4, background: color }} />
               <div style={{ flex: 1 }}>{p.name}</div>
-              <div style={{ fontWeight: 700 }}>{formatSeconds(p.value)}</div>
+              <div style={{ fontWeight: 700 }}>{timeStr}</div>
             </div>
           )
         })}
@@ -186,7 +186,7 @@ export default function Charts({ rows = [], allRows = [] }) {
         <div style={{ width: '100%', height: 260 }}>
           <ResponsiveContainer>
             <PieChart>
-              <Pie data={goldData} dataKey="value" nameKey="name" outerRadius={86} innerRadius={48} paddingAngle={2} >
+              <Pie data={goldData} dataKey="value" nameKey="name" outerRadius={86} innerRadius={48} paddingAngle={2} label={{ position: 'inside', fontSize: 14,  fontWeight: 'bold', textAnchor: 'middle' }} >
                 {goldData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
               </Pie>
               <Tooltip formatter={(v) => [`${v} gold${v===1?'':'s'}`, 'Golds']} />
@@ -195,6 +195,38 @@ export default function Charts({ rows = [], allRows = [] }) {
           </ResponsiveContainer>
         </div>
         <div className="text-xs text-[var(--muted)] mt-2">Counts of 1st-place finishes per distance (ties count for each tied athlete).</div>
+      </div>
+
+      {/* Line chart: time progression by distance */}
+      <div className="card">
+        <h3 className="font-semibold mb-2">Time progression by distance for each athlete</h3>
+        <div style={{ width: '100%', height: 360 }}>
+          <ResponsiveContainer>
+            <LineChart data={distanceProgression.data} margin={{ left: 20, right: 20 }}>
+              <CartesianGrid strokeDasharray="3 6" stroke="rgba(255,255,255,0.03)" />
+              <XAxis dataKey="distance" type="number" domain={[0, 5]} ticks={[1,2,3,4,5]} tick={{ fill: 'var(--muted)' }} label={{ value: 'Distance (km)', position: 'insideBottom', offset: -2 }} />
+              <YAxis type="number" domain={[0, 40]} tickFormatter={(m) => `${Math.floor(m)}:${String(Math.round((m % 1) * 60)).padStart(2, '0')}`} tick={{ fill: 'var(--muted)' }} label={{ value: 'Time (min)', angle: -90, position: 'left' }} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend verticalAlign="top" height={36} wrapperStyle={{ paddingBottom: 8 }} />
+              {distanceProgression.athletes.map((ath, idx) => (
+                <React.Fragment key={ath}>
+                  <Line
+                    type="monotone"
+                    dataKey={ath}
+                    name={ath}
+                    stroke={COLORS[idx % COLORS.length]}
+                    strokeWidth={3}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff' }}
+                    isAnimationActive={true}
+                    connectNulls={false}
+                  />
+                </React.Fragment>
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="text-xs text-[var(--muted)] mt-2">Lines show each athlete's time progression across distances from 400m to 5km. Y-axis shows time in minutes.</div>
       </div>
 
       {/* Grouped bar chart: color bars by rank (gold/silver/bronze/neutral) */}
@@ -222,45 +254,6 @@ export default function Charts({ rows = [], allRows = [] }) {
           </ResponsiveContainer>
         </div>
         <div className="text-xs text-[var(--muted)] mt-2">Bars colored by rank: gold / silver / bronze for top 3, neutral otherwise.</div>
-      </div>
-
-      {/* Line chart stays last */}
-      <div className="card">
-        <h3 className="font-semibold mb-2">Times by athlete over dates (filtered)</h3>
-        <div style={{ width: '100%', height: 360 }}>
-          <ResponsiveContainer>
-            <LineChart data={timeSeries.data} margin={{ right: 20 }}>
-              <CartesianGrid strokeDasharray="3 6" stroke="rgba(255,255,255,0.03)" />
-              <XAxis dataKey="date" tick={{ fill: 'var(--muted)' }} />
-              <YAxis tickFormatter={formatSeconds} tick={{ fill: 'var(--muted)' }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend verticalAlign="top" height={36} wrapperStyle={{ paddingBottom: 8 }} />
-              {timeSeries.athletes.map((ath, idx) => (
-                <React.Fragment key={ath}>
-                  <Line
-                    type="monotone"
-                    dataKey={ath}
-                    name={ath}
-                    stroke={COLORS[idx % COLORS.length]}
-                    strokeWidth={3}
-                    dot={{ r: 0 }}
-                    activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff' }}
-                    isAnimationActive={true}
-                    connectNulls={false}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey={ath}
-                    fillOpacity={0.08}
-                    stroke="none"
-                    fill={COLORS[idx % COLORS.length]}
-                  />
-                </React.Fragment>
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="text-xs text-[var(--muted)] mt-2">Lines show each athlete's best time per date. Lines are smoothed and interactive.</div>
       </div>
     </div>
   )
