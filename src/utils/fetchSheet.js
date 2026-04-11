@@ -48,6 +48,11 @@ export async function fetchSheetAsJson(){
             obj.TimeSeconds = secs
           }
 
+          // normalize PhotoUrl: trim quotes and whitespace
+          if (obj.PhotoUrl) {
+            obj.PhotoUrl = String(obj.PhotoUrl).trim().replace(/^"|"$/g, '')
+          }
+
           // normalize/parse distance -> DistanceKm
           const distRaw = obj.Distance || obj['Distance (m)'] || obj['DistanceKm']
           const km = parseDistanceToKm(distRaw)
