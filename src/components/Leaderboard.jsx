@@ -59,8 +59,20 @@ export default function Leaderboard({ rows, onVisibleChange }){
     if (onVisibleChange) onVisibleChange(sorted)
   }, [sorted, onVisibleChange])
 
-  // top 3 cards for selected distance
-  const top3 = sorted.slice(0,3)
+  // top 3 cards for selected distance (best performers by current metric)
+  const top3 = useMemo(() => {
+    const key = sortBy === 'Time' ? 'timeSeconds' : (sortBy === 'Pace' ? 'pace' : 'avgSpeed')
+    const direction = sortBy === 'AvgSpeed' ? -1 : 1
+    return [...enriched]
+      .sort((a, b) => {
+        const va = a[key] ?? (direction === 1 ? 1e9 : -1e9)
+        const vb = b[key] ?? (direction === 1 ? 1e9 : -1e9)
+        return direction * (va - vb)
+      })
+      .slice(0, 3)
+  }, [enriched, sortBy])
+
+  const visibleTop3 = sortDir === 'asc' ? top3 : [...top3].reverse()
 
   function toggleSort(column){
     if (sortBy === column) {
@@ -72,11 +84,18 @@ export default function Leaderboard({ rows, onVisibleChange }){
   }
 
   // small helper to format pace/speed
-  const compact = (n, unit) => (n == null ? '-' : `${n} ${unit}`)
+  const compact = (n, unit) => {
+    if (n == null) return '-'
+    if (unit === 'min/km') {
+      const min = Math.floor(n)
+      const sec = Math.round((n - min) * 60)
+      return `${min}:${sec.toString().padStart(2, '0')} ${unit}`
+    }
+    return `${n} ${unit}`
+  }
 
   return (
     <div>
-      <div className="mb-4">
         {/* stacked on mobile, inline on >=sm */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
@@ -127,20 +146,19 @@ export default function Leaderboard({ rows, onVisibleChange }){
             </div>
           </div>
         </div>
-      </div>
 
       {/* Top 3 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-        {top3.map((r, i) => {
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 mt-4 sm:mt-6">
+        {visibleTop3.map((r, i) => {
           const tileClass =
-            i === 0 ? 'top3-tile top3-gold neon-pulse' :
-            i === 1 ? 'top3-tile top3-silver neon-pulse' :
-                      'top3-tile top3-bronze neon-pulse'
+            i === 0 ? (sortDir === 'asc' ? 'top3-tile top3-gold' : 'top3-tile top3-bronze') :
+            i === 1 ? 'top3-tile top3-silver' :
+                      (sortDir === 'asc' ? 'top3-tile top3-bronze' : 'top3-tile top3-gold')
 
           return (
             <div key={i} className={tileClass}>
               <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold">{i === 0 ? 'Gold' : i === 1 ? 'Silver' : 'Bronze'}</div>
+                <div className="text-sm font-semibold">{i === 0 ? (sortDir === 'asc' ? 'Gold' : 'Bronze') : i === 1 ? 'Silver' : (sortDir === 'asc' ? 'Bronze' : 'Gold')}</div>
                 <div className="text-xs font-medium px-2 py-0.5 rounded-full bg-white/20 text-white/90">
                   {r.Distance || (r.distanceKm ? `${r.distanceKm}km` : '')}
                 </div>
@@ -179,7 +197,7 @@ export default function Leaderboard({ rows, onVisibleChange }){
                 <th className="p-3 w-12">#</th>
                 <th className="p-3">Name</th>
                 <th className="p-3 cursor-pointer" onClick={()=>toggleSort('Time')}>Time</th>
-                <th className="p-3">Pace</th>
+                <th className="p-3">Pace (min/km)</th>
                 <th className="p-3 cursor-pointer" onClick={()=>toggleSort('AvgSpeed')}>Avg Speed</th>
               </tr>
             </thead>
@@ -195,7 +213,7 @@ export default function Leaderboard({ rows, onVisibleChange }){
                     </div>
                   </td>
                   <td className="p-3">{r.Time || '-'}</td>
-                  <td className="p-3">{r.pace ? `${r.pace} min/km` : (r.Pace || '-')}</td>
+                  <td className="p-3">{compact(r.pace, 'min/km')}</td>
                   <td className="p-3">{r.avgSpeed ? `${r.avgSpeed} km/h` : (r.AvgSpeed || '-')}</td>
                 </tr>
               ))}
