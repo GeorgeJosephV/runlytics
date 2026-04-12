@@ -38,7 +38,6 @@ export async function fetchSheetAsJson(){
 
           // compute TimeSeconds from Time-like columns
           if (obj.Time || obj['Time'] || obj['Best Time']) {
-            debugger;
             const t = (obj.Time || obj['Best Time'] || obj['Time']).replace(' mins','')
             const parts = String(t).split(':').map(Number)
             let secs = null

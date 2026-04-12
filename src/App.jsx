@@ -33,10 +33,21 @@ export default function App() {
               <div className="lg:col-span-2 min-w-0">
                 {/* pass setter so Leaderboard can report its visible rows */}
                 <Leaderboard rows={data} onVisibleChange={setVisibleRows} />
+                <div className="mt-4">
+                  <Charts
+                    rows={visibleRows.length ? visibleRows : data}
+                    allRows={data}
+                    showGold={false}
+                    showBar={false}
+                  />
+                </div>
               </div>
               <div className="min-w-0">
-                {/* Charts now receive only the rows visible in the grid */}
-                <Charts rows={visibleRows.length ? visibleRows : data} allRows={data} />
+                <Charts
+                  rows={visibleRows.length ? visibleRows : data}
+                  allRows={data}
+                  showLine={false}
+                />
               </div>
             </div>
           )}

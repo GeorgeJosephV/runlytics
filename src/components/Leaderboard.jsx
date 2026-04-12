@@ -25,46 +25,50 @@ export default function Leaderboard({ rows, onVisibleChange }) {
   const [sortDir, setSortDir] = useState("asc");
   const [query, setQuery] = useState("");
 
-  const filtered = rows.filter((r) => {
-    const matchesDistance = selected
-      ? r.Distance === selected || `${r.DistanceKm}km` === selected
-      : true;
-    const name = (r.Name || r.Runner || r.Athlete || "").toLowerCase();
-    const matchesQuery = query.trim()
-      ? name.includes(query.toLowerCase())
-      : true;
-    return matchesDistance && matchesQuery;
-  });
+  const filtered = useMemo(() => {
+    return rows.filter((r) => {
+      const matchesDistance = selected
+        ? r.Distance === selected || `${r.DistanceKm}km` === selected
+        : true;
+      const name = (r.Name || r.Runner || r.Athlete || "").toLowerCase();
+      const matchesQuery = query.trim()
+        ? name.includes(query.toLowerCase())
+        : true;
+      return matchesDistance && matchesQuery;
+    });
+  }, [rows, selected, query]);
 
-  const enriched = filtered.map((r) => {
-    const timeSeconds =
-      r.TimeSeconds ??
-      parseTimeToSeconds(r.Time || r["Best Time"] || r["Time"]);
-    const distanceKm =
-      r.DistanceKm ??
-      (r.Distance
-        ? Number(r.Distance) >= 100
-          ? Number(r.Distance) / 1000
-          : Number(r.Distance)
-        : null);
-    const pace =
-      r.PaceMinPerKm ??
-      (timeSeconds && distanceKm
-        ? Number((timeSeconds / 60 / distanceKm).toFixed(2))
-        : null);
-    const avgSpeed =
-      r.AvgSpeedKmH ??
-      (timeSeconds && distanceKm
-        ? Number((distanceKm / (timeSeconds / 3600)).toFixed(2))
-        : null);
-    return {
-      ...r,
-      timeSeconds,
-      distanceKm,
-      pace,
-      avgSpeed,
-    };
-  });
+  const enriched = useMemo(() => {
+    return filtered.map((r) => {
+      const timeSeconds =
+        r.TimeSeconds ??
+        parseTimeToSeconds(r.Time || r["Best Time"] || r["Time"]);
+      const distanceKm =
+        r.DistanceKm ??
+        (r.Distance
+          ? Number(r.Distance) >= 100
+            ? Number(r.Distance) / 1000
+            : Number(r.Distance)
+          : null);
+      const pace =
+        r.PaceMinPerKm ??
+        (timeSeconds && distanceKm
+          ? Number((timeSeconds / 60 / distanceKm).toFixed(2))
+          : null);
+      const avgSpeed =
+        r.AvgSpeedKmH ??
+        (timeSeconds && distanceKm
+          ? Number((distanceKm / (timeSeconds / 3600)).toFixed(2))
+          : null);
+      return {
+        ...r,
+        timeSeconds,
+        distanceKm,
+        pace,
+        avgSpeed,
+      };
+    });
+  }, [filtered]);
 
   // sorting
   const sorted = useMemo(() => {
@@ -345,24 +349,35 @@ export default function Leaderboard({ rows, onVisibleChange }) {
       </div>
 
       <div className="card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div>
+          <table className="w-full table-fixed text-xs sm:text-sm">
+            <colgroup>
+              <col className="w-[8%] sm:w-[7%]" />
+              <col className="w-[36%] sm:w-[31%]" />
+              <col className="w-[15%] sm:w-[17%]" />
+              <col className="w-[19%] sm:w-[22%]" />
+              <col className="w-[22%] sm:w-[23%]" />
+            </colgroup>
             <thead className="text-left text-gray-500 border-b">
               <tr>
-                <th className="p-3 w-12">#</th>
-                <th className="p-3">Name</th>
+                <th className="px-2 py-3 sm:p-3">#</th>
+                <th className="px-2 py-3 sm:p-3">Name</th>
                 <th
-                  className="p-3 cursor-pointer"
+                  className="px-2 py-3 sm:p-3 cursor-pointer break-words"
                   onClick={() => toggleSort("Time")}
                 >
                   Time
                 </th>
-                <th className="p-3">Pace (min/km)</th>
+                <th className="px-2 py-3 sm:p-3 break-words">
+                  <span className="sm:hidden">Pace</span>
+                  <span className="hidden sm:inline">Pace (min/km)</span>
+                </th>
                 <th
-                  className="p-3 cursor-pointer"
+                  className="px-2 py-3 sm:p-3 cursor-pointer break-words"
                   onClick={() => toggleSort("AvgSpeed")}
                 >
-                  Avg Speed
+                  <span className="sm:hidden">Avg</span>
+                  <span className="hidden sm:inline">Avg Speed</span>
                 </th>
               </tr>
             </thead>
@@ -372,26 +387,36 @@ export default function Leaderboard({ rows, onVisibleChange }) {
                   key={i}
                   className="border-b hover:scale-[1.005] hover:shadow-sm transition"
                 >
-                  <td className="p-3 font-semibold">{i + 1}</td>
-                  <td className="p-3 flex items-center gap-3">
-                    <Avatar
-                      src={r.PhotoUrl}
-                      name={r.Name || r.Runner || r.Athlete}
-                      size={32}
-                    />
-                    <div>
-                      <div className="font-medium">
-                        {r.Name || r["Runner"] || r["Athlete"]}
+                  <td className="px-2 py-3 sm:p-3 font-semibold align-top">
+                    {i + 1}
+                  </td>
+                  <td className="px-2 py-3 sm:p-3 align-top">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <div className="flex-shrink-0">
+                        <Avatar
+                          src={r.PhotoUrl}
+                          name={r.Name || r.Runner || r.Athlete}
+                          size={32}
+                        />
                       </div>
-                      <div className="text-xs text-[var(--muted)]">
-                        {r.Distance ||
-                          (r.distanceKm ? `${r.distanceKm} km` : "")}
+                      <div className="min-w-0">
+                        <div className="font-medium leading-snug break-words">
+                          {r.Name || r["Runner"] || r["Athlete"]}
+                        </div>
+                        <div className="text-[11px] sm:text-xs text-[var(--muted)] leading-snug break-words">
+                          {r.Distance ||
+                            (r.distanceKm ? `${r.distanceKm} km` : "")}
+                        </div>
                       </div>
                     </div>
                   </td>
-                  <td className="p-3">{r.Time || "-"}</td>
-                  <td className="p-3">{compact(r.pace, "min/km")}</td>
-                  <td className="p-3">
+                  <td className="px-2 py-3 sm:p-3 align-top break-words leading-snug">
+                    {r.Time || "-"}
+                  </td>
+                  <td className="px-2 py-3 sm:p-3 align-top break-words leading-snug">
+                    {compact(r.pace, "min/km")}
+                  </td>
+                  <td className="px-2 py-3 sm:p-3 align-top break-words leading-snug">
                     {r.avgSpeed ? `${r.avgSpeed} km/h` : r.AvgSpeed || "-"}
                   </td>
                 </tr>

@@ -1,10 +1,16 @@
 import React, { useMemo } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell, Legend, CartesianGrid, Area
+  LineChart, Line, PieChart, Pie, Cell, Legend, CartesianGrid
 } from 'recharts'
 
-export default function Charts({ rows = [], allRows = [] }) {
+export default function Charts({
+  rows = [],
+  allRows = [],
+  showGold = true,
+  showLine = true,
+  showBar = true,
+}) {
   const formatSeconds = (s) => {
     if (s == null || !isFinite(s)) return '-'
     const sec = Math.round(s)
@@ -18,6 +24,12 @@ export default function Charts({ rows = [], allRows = [] }) {
   const SILVER = '#c0c0c0'
   const BRONZE = '#cd7f32'
   const NEUTRAL = '#94a3b8'
+  const rankLegendPayload = [
+    { value: 'Gold', type: 'square', color: GOLD },
+    { value: 'Silver', type: 'square', color: SILVER },
+    { value: 'Bronze', type: 'square', color: BRONZE },
+    { value: 'Other', type: 'square', color: NEUTRAL },
+  ]
 
   // --- grouped bar data (best times per athlete per distance) ---
   const { byDistance, athletes, rankMap } = useMemo(() => {
@@ -180,7 +192,7 @@ export default function Charts({ rows = [], allRows = [] }) {
   return (
     <div className="space-y-4">
       {/* Gold medals first (always all distances) */}
-      <div className="card">
+      {showGold && <div className="card">
         <h3 className="font-semibold mb-2">Gold medals by athlete (ALL DISTANCES)</h3>
         <div className="text-xs text-[var(--muted)] mb-2">Note: this chart always shows 1st-place counts across all distances regardless of the grid filter.</div>
         <div style={{ width: '100%', height: 260 }}>
@@ -195,16 +207,26 @@ export default function Charts({ rows = [], allRows = [] }) {
           </ResponsiveContainer>
         </div>
         <div className="text-xs text-[var(--muted)] mt-2">Counts of 1st-place finishes per distance (ties count for each tied athlete).</div>
-      </div>
+      </div>}
 
       {/* Line chart: time progression by distance */}
-      <div className="card">
+      {showLine && <div className="card">
         <h3 className="font-semibold mb-2">Time progression by distance for each athlete</h3>
-        <div style={{ width: '100%', height: 360 }}>
+        <div style={{ width: '100%', height: 390 }}>
           <ResponsiveContainer>
-            <LineChart data={distanceProgression.data} margin={{ left: 20, right: 20 }}>
+            <LineChart
+              data={distanceProgression.data}
+              margin={{ top: 16, right: 20, left: 20, bottom: 36 }}
+            >
               <CartesianGrid strokeDasharray="3 6" stroke="rgba(255,255,255,0.03)" />
-              <XAxis dataKey="distance" type="number" domain={[0, 5]} ticks={[1,2,3,4,5]} tick={{ fill: 'var(--muted)' }} label={{ value: 'Distance (km)', position: 'insideBottom', offset: -2 }} />
+              <XAxis
+                dataKey="distance"
+                type="number"
+                domain={[0, 5]}
+                ticks={[1,2,3,4,5]}
+                tick={{ fill: 'var(--muted)' }}
+                label={{ value: 'Distance (km)', position: 'bottom', offset: 12 }}
+              />
               <YAxis type="number" domain={[0, 40]} tickFormatter={(m) => `${Math.floor(m)}:${String(Math.round((m % 1) * 60)).padStart(2, '0')}`} tick={{ fill: 'var(--muted)' }} label={{ value: 'Time (min)', angle: -90, position: 'left' }} />
               <Tooltip content={<CustomTooltip />} />
               <Legend verticalAlign="top" height={36} wrapperStyle={{ paddingBottom: 8 }} />
@@ -227,10 +249,10 @@ export default function Charts({ rows = [], allRows = [] }) {
           </ResponsiveContainer>
         </div>
         <div className="text-xs text-[var(--muted)] mt-2">Lines show each athlete's time progression across distances from 400m to 5km. Y-axis shows time in minutes.</div>
-      </div>
+      </div>}
 
       {/* Grouped bar chart: color bars by rank (gold/silver/bronze/neutral) */}
-      <div className="card">
+      {showBar && <div className="card">
         <h3 className="font-semibold mb-2">Best time by distance — all visible athletes</h3>
         <div style={{ width: '100%', height: 320 }}>
           <ResponsiveContainer>
@@ -239,7 +261,7 @@ export default function Charts({ rows = [], allRows = [] }) {
               <XAxis dataKey="distance" tick={{ fill: 'var(--muted)' }} />
               <YAxis tickFormatter={formatSeconds} tick={{ fill: 'var(--muted)' }} />
               <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ paddingTop: 6 }} />
+              <Legend payload={rankLegendPayload} wrapperStyle={{ paddingTop: 6 }} />
               {athletes.map((ath, idx) => (
                 <Bar key={ath} dataKey={ath} name={ath} maxBarSize={36} radius={[6,6,6,6]} >
                   {byDistance.map((entry, eidx) => {
@@ -254,7 +276,7 @@ export default function Charts({ rows = [], allRows = [] }) {
           </ResponsiveContainer>
         </div>
         <div className="text-xs text-[var(--muted)] mt-2">Bars colored by rank: gold / silver / bronze for top 3, neutral otherwise.</div>
-      </div>
+      </div>}
     </div>
   )
 }
